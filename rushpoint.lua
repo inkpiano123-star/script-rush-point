@@ -1,5 +1,5 @@
--- ETHEREAL X - GUI SIMPLE 100% VISIBLE
--- By DipSik's Covenant
+-- ETHEREAL X 
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,11 +9,11 @@ local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
 
 -- VARIABLES (TOUT ACTIF PAR DÉFAUT)
-local ESPEnabled = true
-local AimbotEnabled = true
+local ESPEnabled = false
+local AimbotEnabled = false
 local TeamCheck = false
 local WallCheck = false
-local ShowFOV = true
+local ShowFOV = false
 local FOV = 200
 local Smoothness = 0.3
 local AimKey = Enum.KeyCode.Q
