@@ -1,5 +1,5 @@
--- NEXUS : Ultimate Rush Point Cheat
--- By DipSik's Covenant
+-- NEXUS V2 : Rush Point Ultimate Cheat
+-- Aimbot intelligent + ESP garanti
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,172 +9,188 @@ local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
 local Workspace = game:GetService("Workspace")
 
--- Core Variables
-local ESPEnabled = false
+-- Variables principales
+local ESPEnabled = true
 local AimbotEnabled = false
-local Aimlock = false
 local TeamCheck = true
 local WallCheck = true
-local VisibleCheck = true
-local ShowFOV = false
-local FOV = 120
-local Smoothness = 0.2
-local AimPart = "Head"
-local AimbotKey = Enum.KeyCode.E
-local Holding = false
+local ShowFOV = true
+local FOV = 250
+local Smoothness = 0.3
+local AimlockKey = Enum.KeyCode.Q
+local MenuKey = Enum.KeyCode.Insert
 
--- ESP Storage
-local ESPFolder = Instance.new("Folder")
-ESPFolder.Name = "NexusESP"
-ESPFolder.Parent = workspace
-
-local ESPCache = {}
+-- Système de scroll
+local CurrentTargetIndex = 1
+local TargetList = {}
+local MaxTargets = 10
 
 -- FOV Circle
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = ShowFOV
 FOVCircle.Radius = FOV
-FOVCircle.Color = Color3.fromRGB(255, 50, 50)
+FOVCircle.Color = Color3.fromRGB(255, 100, 100)
 FOVCircle.Thickness = 2
 FOVCircle.Filled = false
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- Target
-local CurrentTarget = nil
+-- Target Indicator
+local TargetDot = Drawing.new("Circle")
+TargetDot.Visible = false
+TargetDot.Radius = 8
+TargetDot.Color = Color3.fromRGB(0, 255, 0)
+TargetDot.Thickness = 3
+TargetDot.Filled = true
 
--- Load LinoriaLib properly
-local success, Library = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
+-- ESP Storage
+local ESPCache = {}
+
+-- Création du menu avec Rayfield (plus stable)
+local Rayfield = nil
+pcall(function()
+    Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 end)
 
-if not success then
-    Library = loadstring(game:HttpGet("https://pastebin.com/raw/vq8kU3p2"))()
+if not Rayfield then
+    Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua'))()
 end
 
--- Create Window
-local Window = Library:CreateWindow("NEXUS | Rush Point")
-local Tabs = {
-    Aimbot = Window:AddTab("Aimbot"),
-    Visuals = Window:AddTab("Visuals"),
-    Players = Window:AddTab("Players"),
-    Settings = Window:AddTab("Settings")
-}
+-- Création de la fenêtre
+local Window = Rayfield:CreateWindow({
+    Name = "NEXUS V2 | Rush Point",
+    LoadingTitle = "NEXUS Loading...",
+    LoadingSubtitle = "by DipSik's Covenant",
+    ConfigurationSaving = {
+        Enabled = false
+    },
+    Discord = {
+        Enabled = false,
+        Invite = "",
+        RememberJoins = false
+    },
+    KeySystem = false,
+})
 
--- Aimbot Tab
-local AimGroup = Tabs.Aimbot:AddLeftGroupbox("Aimbot")
+-- Onglet Aimbot
+local AimbotTab = Window:CreateTab("Aimbot", "🎯")
+local VisualsTab = Window:CreateTab("Visuals", "👁️")
+local MiscTab = Window:CreateTab("Misc", "⚙️")
 
-AimGroup:AddToggle('AimbotToggle', {
-    Text = 'Enable Aimbot',
-    Default = false,
+-- Section Aimbot
+local AimbotSection = AimbotTab:CreateSection("Aimbot Core")
+
+local AimbotToggle = AimbotSection:CreateToggle({
+    Name = "Enable Aimbot",
+    CurrentValue = false,
+    Flag = "AimbotToggle",
     Callback = function(value)
         AimbotEnabled = value
     end
 })
 
-AimGroup:AddToggle('AimlockToggle', {
-    Text = 'Aimlock Mode',
-    Default = false,
-    Callback = function(value)
-        Aimlock = value
-        if value then AimbotEnabled = true end
-    end
-})
-
-AimGroup:AddToggle('TeamCheckToggle', {
-    Text = 'Team Check',
-    Default = true,
+local TeamCheckToggle = AimbotSection:CreateToggle({
+    Name = "Team Check",
+    CurrentValue = true,
+    Flag = "TeamCheckToggle",
     Callback = function(value)
         TeamCheck = value
     end
 })
 
-AimGroup:AddToggle('WallCheckToggle', {
-    Text = 'Wall Check',
-    Default = true,
+local WallCheckToggle = AimbotSection:CreateToggle({
+    Name = "Wall Check",
+    CurrentValue = true,
+    Flag = "WallCheckToggle",
     Callback = function(value)
         WallCheck = value
     end
 })
 
-AimGroup:AddToggle('VisibleCheckToggle', {
-    Text = 'Visibility Check',
-    Default = true,
-    Callback = function(value)
-        VisibleCheck = value
-    end
-})
-
-AimGroup:AddToggle('ShowFOVToggle', {
-    Text = 'Show FOV Circle',
-    Default = false,
-    Callback = function(value)
-        ShowFOV = value
-        FOVCircle.Visible = value
-    end
-})
-
-AimGroup:AddSlider('FOVSlider', {
-    Text = 'FOV Size',
-    Default = 120,
-    Min = 10,
-    Max = 500,
-    Rounding = 0,
+local FOVSlider = AimbotSection:CreateSlider({
+    Name = "FOV Size",
+    Range = {10, 500},
+    Increment = 5,
+    Suffix = "px",
+    CurrentValue = 250,
+    Flag = "FOVSlider",
     Callback = function(value)
         FOV = value
     end
 })
 
-AimGroup:AddSlider('SmoothSlider', {
-    Text = 'Smoothness',
-    Default = 20,
-    Min = 1,
-    Max = 100,
-    Rounding = 0,
+local SmoothSlider = AimbotSection:CreateSlider({
+    Name = "Smoothness",
+    Range = {1, 100},
+    Increment = 1,
+    Suffix = "%",
+    CurrentValue = 30,
+    Flag = "SmoothSlider",
     Callback = function(value)
         Smoothness = value / 100
     end
 })
 
-AimGroup:AddDropdown('AimPartDropdown', {
-    Text = 'Aim Part',
-    Default = 'Head',
-    Values = {'Head', 'HumanoidRootPart', 'UpperTorso', 'LowerTorso'},
-    Callback = function(value)
-        AimPart = value
-    end
-})
+-- Système de scroll
+local ScrollSection = AimbotTab:CreateSection("Target Selection")
 
-AimGroup:AddKeybind('AimbotKeybind', {
-    Text = 'Aimbot Key',
-    Default = Enum.KeyCode.E,
-    Callback = function(key)
-        AimbotKey = key
-    end
-})
+local TargetLabel = ScrollSection:CreateLabel("Current Target: None")
 
-AimGroup:AddLabel('Aimbot Mode: Hold key to aim')
-
--- Visuals Tab
-local VisualsGroup = Tabs.Visuals:AddLeftGroupbox("ESP")
-
-VisualsGroup:AddToggle('ESPToggle', {
-    Text = 'Enable ESP',
-    Default = false,
-    Callback = function(value)
-        ESPEnabled = value
-        if not value then
-            for _, esp in pairs(ESPCache) do
-                if esp.Highlight then
-                    esp.Highlight.Enabled = false
-                end
+local PrevButton = ScrollSection:CreateButton({
+    Name = "← Previous Target",
+    Callback = function()
+        if #TargetList > 0 then
+            CurrentTargetIndex = CurrentTargetIndex - 1
+            if CurrentTargetIndex < 1 then
+                CurrentTargetIndex = #TargetList
             end
+            TargetLabel:Set("Current Target: " .. (TargetList[CurrentTargetIndex] and TargetList[CurrentTargetIndex].Name or "None"))
         end
     end
 })
 
-VisualsGroup:AddToggle('BoxESToggle', {
-    Text = 'Box ESP',
-    Default = true,
+local NextButton = ScrollSection:CreateButton({
+    Name = "Next Target →",
+    Callback = function()
+        if #TargetList > 0 then
+            CurrentTargetIndex = CurrentTargetIndex + 1
+            if CurrentTargetIndex > #TargetList then
+                CurrentTargetIndex = 1
+            end
+            TargetLabel:Set("Current Target: " .. (TargetList[CurrentTargetIndex] and TargetList[CurrentTargetIndex].Name or "None"))
+        end
+    end
+})
+
+local KeybindSection = AimbotTab:CreateSection("Keybinds")
+
+local AimlockKeybind = KeybindSection:CreateKeybind({
+    Name = "Aimlock Key",
+    CurrentKeybind = "Q",
+    HoldToInteract = false,
+    Flag = "AimlockKeybind",
+    Callback = function(Key)
+        AimlockKey = Enum.KeyCode[Key]
+    end
+})
+
+KeybindSection:CreateLabel("Hold Q to lock on selected target")
+
+-- Section Visuals
+local VisualsSection = VisualsTab:CreateSection("ESP Settings")
+
+local ESPToggle = VisualsSection:CreateToggle({
+    Name = "Enable ESP",
+    CurrentValue = true,
+    Flag = "ESPToggle",
+    Callback = function(value)
+        ESPEnabled = value
+    end
+})
+
+local BoxToggle = VisualsSection:CreateToggle({
+    Name = "Box ESP",
+    CurrentValue = true,
+    Flag = "BoxToggle",
     Callback = function(value)
         for _, esp in pairs(ESPCache) do
             if esp.Box then
@@ -184,21 +200,10 @@ VisualsGroup:AddToggle('BoxESToggle', {
     end
 })
 
-VisualsGroup:AddToggle('TracerToggle', {
-    Text = 'Tracers',
-    Default = false,
-    Callback = function(value)
-        for _, esp in pairs(ESPCache) do
-            if esp.Tracer then
-                esp.Tracer.Visible = value and ESPEnabled
-            end
-        end
-    end
-})
-
-VisualsGroup:AddToggle('NameESToggle', {
-    Text = 'Names',
-    Default = true,
+local NameToggle = VisualsSection:CreateToggle({
+    Name = "Show Names",
+    CurrentValue = true,
+    Flag = "NameToggle",
     Callback = function(value)
         for _, esp in pairs(ESPCache) do
             if esp.Name then
@@ -208,101 +213,72 @@ VisualsGroup:AddToggle('NameESToggle', {
     end
 })
 
-VisualsGroup:AddColorpicker('ESPColor', {
-    Text = 'ESP Color',
-    Default = Color3.fromRGB(255, 50, 50),
+local ColorPicker = VisualsSection:CreateColorpicker({
+    Name = "ESP Color",
+    Color = Color3.fromRGB(255, 100, 100),
+    Flag = "ESPColor",
     Callback = function(value)
         for _, esp in pairs(ESPCache) do
-            if esp.Highlight then
-                esp.Highlight.FillColor = value
-                esp.Highlight.OutlineColor = value
-            end
             if esp.Box then esp.Box.Color = value end
-            if esp.Tracer then esp.Tracer.Color = value end
+            if esp.Name then esp.Name.Color = value end
         end
     end
 })
 
--- Players Tab
-local PlayersGroup = Tabs.Players:AddLeftGroupbox("Player List")
+local FOVToggle = VisualsSection:CreateToggle({
+    Name = "Show FOV Circle",
+    CurrentValue = true,
+    Flag = "FOVToggle",
+    Callback = function(value)
+        ShowFOV = value
+        FOVCircle.Visible = value
+    end
+})
 
-local PlayerList = {}
-local function UpdatePlayerList()
-    PlayersGroup:Clear()
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            PlayersGroup:AddLabel(player.Name .. " | " .. (player.Team and player.Team.Name or "No Team"))
+-- Section Misc
+local MiscSection = MiscTab:CreateSection("Utilities")
+
+local RefreshButton = MiscSection:CreateButton({
+    Name = "Refresh ESP",
+    Callback = function()
+        for player, esp in pairs(ESPCache) do
+            if esp.Box then esp.Box:Remove() end
+            if esp.Name then esp.Name:Remove() end
+        end
+        ESPCache = {}
+        
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                CreateESP(player)
+            end
         end
     end
-end
+})
 
-UpdatePlayerList()
-Players.PlayerAdded:Connect(UpdatePlayerList)
-Players.PlayerRemoving:Connect(UpdatePlayerList)
-
--- Settings Tab
-local SettingsGroup = Tabs.Settings:AddLeftGroupbox("Configuration")
-
-SettingsGroup:AddButton('Refresh ESP', function()
-    for player, esp in pairs(ESPCache) do
-        if esp.Highlight then esp.Highlight:Destroy() end
-        if esp.Box then esp.Box:Remove() end
-        if esp.Tracer then esp.Tracer:Remove() end
-        if esp.Name then esp.Name:Remove() end
-    end
-    ESPCache = {}
-    
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            CreateESP(player)
+local UnloadButton = MiscSection:CreateButton({
+    Name = "Unload NEXUS",
+    Callback = function()
+        Rayfield:Destroy()
+        FOVCircle:Remove()
+        TargetDot:Remove()
+        for _, esp in pairs(ESPCache) do
+            if esp.Box then esp.Box:Remove() end
+            if esp.Name then esp.Name:Remove() end
         end
     end
-end)
+})
 
-SettingsGroup:AddButton('Unload Cheat', function()
-    Library:Unload()
-    ESPFolder:Destroy()
-    FOVCircle:Remove()
-    for _, esp in pairs(ESPCache) do
-        if esp.Highlight then esp.Highlight:Destroy() end
-        if esp.Box then esp.Box:Remove() end
-        if esp.Tracer then esp.Tracer:Remove() end
-        if esp.Name then esp.Name:Remove() end
-    end
-    ESPCache = {}
-end)
+MiscSection:CreateLabel("Menu Key: Insert")
 
-SettingsGroup:AddLabel('Menu Key: Insert')
-
--- Set window keybind
-Library:SetWindowKeybind(Enum.KeyCode.Insert)
-
--- ESP Functions
+-- Fonctions ESP
 function CreateESP(player)
     if ESPCache[player] then return end
     
-    local highlight = Instance.new("Highlight")
-    highlight.Name = player.Name .. "_ESP"
-    highlight.Adornee = nil
-    highlight.FillColor = Color3.fromRGB(255, 50, 50)
-    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineTransparency = 0
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = false
-    highlight.Parent = ESPFolder
-    
     local box = Drawing.new("Square")
     box.Visible = false
-    box.Color = Color3.fromRGB(255, 50, 50)
+    box.Color = Color3.fromRGB(255, 100, 100)
     box.Thickness = 2
     box.Filled = false
-    
-    local tracer = Drawing.new("Line")
-    tracer.Visible = false
-    tracer.Color = Color3.fromRGB(255, 50, 50)
-    tracer.Thickness = 1
     
     local name = Drawing.new("Text")
     name.Visible = false
@@ -313,251 +289,277 @@ function CreateESP(player)
     name.Outline = true
     
     ESPCache[player] = {
-        Highlight = highlight,
         Box = box,
-        Tracer = tracer,
         Name = name
     }
 end
 
 function UpdateESP()
     for player, esp in pairs(ESPCache) do
-        if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local hrp = character.HumanoidRootPart
+        if player and player.Character then
+            -- Trouve une partie du corps pour position
+            local root = player.Character:FindFirstChild("HumanoidRootPart") or 
+                        player.Character:FindFirstChild("Head") or
+                        player.Character:FindFirstChild("UpperTorso")
             
-            -- Highlight
-            if esp.Highlight then
-                esp.Highlight.Adornee = character
-                esp.Highlight.Enabled = ESPEnabled
-            end
-            
-            -- Screen position
-            local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            
-            if onScreen then
-                -- Box ESP
-                if esp.Box then
-                    local scale = 1000 / pos.Z
-                    local size = Vector2.new(scale * 2, scale * 3)
-                    esp.Box.Size = size
-                    esp.Box.Position = Vector2.new(pos.X - size.X/2, pos.Y - size.Y/2)
-                    esp.Box.Visible = ESPEnabled
-                end
+            if root then
+                local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
                 
-                -- Tracer
-                if esp.Tracer then
-                    esp.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
-                    esp.Tracer.To = Vector2.new(pos.X, pos.Y)
-                    esp.Tracer.Visible = ESPEnabled
-                end
-                
-                -- Name
-                if esp.Name then
-                    esp.Name.Position = Vector2.new(pos.X, pos.Y - 40)
-                    esp.Name.Visible = ESPEnabled
+                if onScreen then
+                    -- Box ESP
+                    if esp.Box then
+                        local scale = 1200 / pos.Z
+                        local width = scale * 2
+                        local height = scale * 3
+                        
+                        esp.Box.Size = Vector2.new(width, height)
+                        esp.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                        esp.Box.Visible = ESPEnabled
+                        
+                        -- Couleur basée sur l'équipe
+                        if TeamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
+                            esp.Box.Color = Color3.fromRGB(0, 150, 255)
+                        else
+                            esp.Box.Color = ColorPicker.CurrentValue
+                        end
+                    end
+                    
+                    -- Name ESP
+                    if esp.Name then
+                        esp.Name.Position = Vector2.new(pos.X, pos.Y - 50)
+                        esp.Name.Visible = ESPEnabled
+                        
+                        if TeamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
+                            esp.Name.Text = "[TEAM] " .. player.Name
+                        else
+                            esp.Name.Text = player.Name
+                        end
+                    end
+                else
+                    if esp.Box then esp.Box.Visible = false end
+                    if esp.Name then esp.Name.Visible = false end
                 end
             else
                 if esp.Box then esp.Box.Visible = false end
-                if esp.Tracer then esp.Tracer.Visible = false end
                 if esp.Name then esp.Name.Visible = false end
             end
         else
-            if esp.Highlight then esp.Highlight.Enabled = false end
             if esp.Box then esp.Box.Visible = false end
-            if esp.Tracer then esp.Tracer.Visible = false end
             if esp.Name then esp.Name.Visible = false end
         end
     end
 end
 
--- Aimbot Functions
-function GetValidPlayers()
-    local valid = {}
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            if TeamCheck then
-                if not player.Team or player.Team ~= LocalPlayer.Team then
-                    table.insert(valid, player)
-                end
-            else
-                table.insert(valid, player)
+-- Fonctions Aimbot intelligentes
+function ScanPlayerParts(player)
+    local parts = {}
+    if not player.Character then return parts end
+    
+    -- Scan de toutes les parties possibles
+    local possibleParts = {
+        "Head", "HumanoidRootPart", "UpperTorso", "LowerTorso", 
+        "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm",
+        "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg",
+        "LeftHand", "RightHand", "LeftFoot", "RightFoot"
+    }
+    
+    for _, partName in ipairs(possibleParts) do
+        local part = player.Character:FindFirstChild(partName)
+        if part then
+            table.insert(parts, {
+                Part = part,
+                Name = partName,
+                Priority = (partName == "Head" and 3) or (partName == "HumanoidRootPart" and 2) or 1
+            })
+        end
+    end
+    
+    -- Trier par priorité
+    table.sort(parts, function(a, b)
+        return a.Priority > b.Priority
+    end)
+    
+    return parts
+end
+
+function GetBestTargetPart(player)
+    local parts = ScanPlayerParts(player)
+    if #parts > 0 then
+        -- Retourne la partie la plus prioritaire visible
+        for _, partData in ipairs(parts) do
+            local pos, onScreen = Camera:WorldToViewportPoint(partData.Part.Position)
+            if onScreen then
+                return partData.Part
             end
         end
+        return parts[1].Part
     end
-    return valid
+    return nil
 end
 
-function RaycastCheck(origin, target, ignore)
-    if not WallCheck then return true end
+function UpdateTargetList()
+    TargetList = {}
     
-    local direction = (target - origin).Unit
-    local distance = (target - origin).Magnitude
-    local ray = Ray.new(origin, direction * distance)
-    
-    local ignoreList = {LocalPlayer.Character, Camera, ESPFolder}
-    if ignore then
-        table.insert(ignoreList, ignore)
-    end
-    
-    local hit, pos = Workspace:FindPartOnRayWithIgnoreList(ray, ignoreList)
-    
-    if hit then
-        local model = hit:FindFirstAncestorOfClass("Model")
-        if model and model:FindFirstChild("Humanoid") then
-            return true
-        end
-        return false
-    end
-    
-    return true
-end
-
-function GetClosestTarget()
-    local closest = nil
-    local shortestDist = FOV
-    local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-    
-    for _, player in ipairs(GetValidPlayers()) do
-        local character = player.Character
-        if character and character:FindFirstChild(AimPart) then
-            local part = character[AimPart]
-            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-            
-            if onScreen then
-                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                
-                if distance < shortestDist then
-                    if VisibleCheck then
-                        if RaycastCheck(Camera.CFrame.Position, part.Position, character) then
-                            closest = {
-                                Character = character,
-                                Part = part,
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if not TeamCheck or (player.Team ~= LocalPlayer.Team) then
+                if player.Character then
+                    local targetPart = GetBestTargetPart(player)
+                    if targetPart then
+                        -- Vérification mur
+                        if WallCheck then
+                            local origin = Camera.CFrame.Position
+                            local target = targetPart.Position
+                            local direction = (target - origin).Unit
+                            local ray = Ray.new(origin, direction * 1000)
+                            local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, Camera})
+                            
+                            if hit and hit:IsDescendantOf(player.Character) then
+                                table.insert(TargetList, {
+                                    Player = player,
+                                    Part = targetPart,
+                                    Name = player.Name
+                                })
+                            end
+                        else
+                            table.insert(TargetList, {
                                 Player = player,
-                                Distance = distance
-                            }
-                            shortestDist = distance
+                                Part = targetPart,
+                                Name = player.Name
+                            })
                         end
-                    else
-                        closest = {
-                            Character = character,
-                            Part = part,
-                            Player = player,
-                            Distance = distance
-                        }
-                        shortestDist = distance
                     end
                 end
             end
         end
     end
     
-    return closest
+    -- Mettre à jour le label
+    if #TargetList > 0 then
+        if CurrentTargetIndex > #TargetList then
+            CurrentTargetIndex = 1
+        end
+        TargetLabel:Set("Current Target: " .. TargetList[CurrentTargetIndex].Name)
+    else
+        TargetLabel:Set("Current Target: None")
+        CurrentTargetIndex = 1
+    end
 end
 
--- Input Handling
+function GetCurrentTarget()
+    if #TargetList == 0 then
+        UpdateTargetList()
+    end
+    
+    if CurrentTargetIndex >= 1 and CurrentTargetIndex <= #TargetList then
+        return TargetList[CurrentTargetIndex]
+    end
+    return nil
+end
+
+-- Input handling pour le scroll
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == AimbotKey then
-        Holding = true
+    -- Scroll avec molette
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        if #TargetList > 0 then
+            if input.Position.Z > 0 then
+                -- Scroll up = target précédent
+                CurrentTargetIndex = CurrentTargetIndex - 1
+                if CurrentTargetIndex < 1 then
+                    CurrentTargetIndex = #TargetList
+                end
+            else
+                -- Scroll down = target suivant
+                CurrentTargetIndex = CurrentTargetIndex + 1
+                if CurrentTargetIndex > #TargetList then
+                    CurrentTargetIndex = 1
+                end
+            end
+            TargetLabel:Set("Current Target: " .. TargetList[CurrentTargetIndex].Name)
+        end
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == AimbotKey then
-        Holding = false
-        CurrentTarget = nil
-    end
-end)
-
--- Main Loop
+-- Boucle principale
 RunService.RenderStepped:Connect(function()
-    -- Update FOV Circle
+    -- Mettre à jour FOV Circle
     FOVCircle.Radius = FOV
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     
-    -- Update ESP
+    -- Mettre à jour ESP
     UpdateESP()
     
-    -- Aimbot Logic
-    if AimbotEnabled then
-        local shouldAim = false
+    -- Aimbot
+    if AimbotEnabled and UserInputService:IsKeyDown(AimlockKey) then
+        local target = GetCurrentTarget()
         
-        if Aimlock then
-            shouldAim = true
-        elseif Holding then
-            shouldAim = true
-        end
-        
-        if shouldAim then
-            if not CurrentTarget then
-                CurrentTarget = GetClosestTarget()
+        if target and target.Part and target.Player.Character then
+            -- Afficher le point vert sur la cible
+            local pos, onScreen = Camera:WorldToViewportPoint(target.Part.Position)
+            if onScreen then
+                TargetDot.Position = Vector2.new(pos.X, pos.Y)
+                TargetDot.Visible = true
+            else
+                TargetDot.Visible = false
             end
             
-            if CurrentTarget and CurrentTarget.Part then
-                -- Verify target is still valid
-                if not CurrentTarget.Character or not CurrentTarget.Character:FindFirstChild(AimPart) then
-                    CurrentTarget = GetClosestTarget()
-                end
-                
-                if CurrentTarget and CurrentTarget.Part then
-                    -- Wall check during aim
-                    if WallCheck then
-                        if not RaycastCheck(Camera.CFrame.Position, CurrentTarget.Part.Position, CurrentTarget.Character) then
-                            CurrentTarget = nil
-                            return
-                        end
-                    end
-                    
-                    -- Aim smoothing
-                    local targetPos = CurrentTarget.Part.Position
-                    
-                    -- Movement prediction
-                    if CurrentTarget.Character:FindFirstChild("Humanoid") then
-                        targetPos = targetPos + (CurrentTarget.Character.Humanoid.MoveDirection * 0.1)
-                    end
-                    
-                    local currentCF = Camera.CFrame
-                    local goalCF = CFrame.new(currentCF.Position, targetPos)
-                    Camera.CFrame = currentCF:Lerp(goalCF, 1 - Smoothness)
-                end
-            else
-                CurrentTarget = GetClosestTarget()
+            -- Smooth aiming
+            local targetPos = target.Part.Position
+            
+            -- Prédiction de mouvement basique
+            if target.Player.Character:FindFirstChild("Humanoid") then
+                targetPos = targetPos + (target.Player.Character.Humanoid.MoveDirection * 0.15)
             end
+            
+            local currentCF = Camera.CFrame
+            local goalCF = CFrame.new(currentCF.Position, targetPos)
+            Camera.CFrame = currentCF:Lerp(goalCF, 1 - Smoothness)
         else
-            CurrentTarget = nil
+            TargetDot.Visible = false
+            UpdateTargetList() -- Re-scan si pas de cible
         end
     else
-        CurrentTarget = nil
+        TargetDot.Visible = false
     end
 end)
 
--- Initialize ESP for existing players
+-- Initialisation
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         CreateESP(player)
     end
 end
 
--- Player connections
 Players.PlayerAdded:Connect(function(player)
     CreateESP(player)
-    UpdatePlayerList()
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     if ESPCache[player] then
-        if ESPCache[player].Highlight then ESPCache[player].Highlight:Destroy() end
         if ESPCache[player].Box then ESPCache[player].Box:Remove() end
-        if ESPCache[player].Tracer then ESPCache[player].Tracer:Remove() end
         if ESPCache[player].Name then ESPCache[player].Name:Remove() end
         ESPCache[player] = nil
     end
-    UpdatePlayerList()
 end)
 
--- Notify user
-Library:Notify("NEXUS loaded successfully!", 5)
-print("NEXUS Cheat Loaded")
-print("Menu Key: INSERT")
-print("Aimbot Key: E (Hold)")
-print("Aimlock: Toggle in menu")
+-- Rafraîchir la liste des cibles toutes les secondes
+spawn(function()
+    while true do
+        wait(1)
+        UpdateTargetList()
+    end
+end)
+
+Rayfield:Notify({
+    Title = "NEXUS V2 Loaded",
+    Content = "Aimbot: Hold Q | Menu: Insert | Scroll: Mouse Wheel",
+    Duration = 6,
+    Image = nil
+})
+
+print("══════════════════════════════════")
+print("NEXUS V2 ACTIVATED")
+print("Menu: INSERT")
+print("Aimlock: HOLD Q")
+print("Target Scroll: MOUSE WHEEL")
+print("══════════════════════════════════")
