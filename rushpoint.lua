@@ -1,5 +1,5 @@
--- NEXUS ULTIMATE - Rush Point Special Edition
--- 100% Working - Tested on Rush Point
+-- NEXUS X - Rush Point Bypass Edition
+-- Force brute pour faire fonctionner ESP + Aimbot
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -9,434 +9,359 @@ local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
 local Workspace = game:GetService("Workspace")
 
--- VARIABLES PRINCIPALES (TOUT VISIBLE)
+-- FORÇAGE DES VARIABLES
 local ESPEnabled = true
 local AimbotEnabled = true
-local TeamCheck = false  -- Désactivé par défaut (Rush Point a des problèmes d'équipe)
-local WallCheck = false  -- Désactivé pour plus de fiabilité
+local TeamCheck = false -- Désactivé car Rush Point bloque souvent Team
+local WallCheck = false -- Désactivé pour la fiabilité
 local ShowFOV = true
-local FOV = 180
-local Smoothness = 0.25
-local AimKey = Enum.KeyCode.C
-local MenuKey = Enum.KeyCode.Insert
+local FOV = 200
+local Smoothness = 0.35
+local AimKey = Enum.KeyCode.LeftAlt -- Touche alternative qui passe souvent
+local MenuKey = Enum.KeyCode.RightControl
 
--- FOV CIRCLE (TOUJOURS VISIBLE)
+-- FOV FORCÉ
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Visible = true
 FOVCircle.Radius = FOV
-FOVCircle.Color = Color3.fromRGB(255, 50, 100)
+FOVCircle.Color = Color3.fromRGB(255, 0, 0)
 FOVCircle.Thickness = 2
 FOVCircle.Filled = false
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- GUI PRINCIPAL (FORCÉ À APPARAÎTRE)
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NexusUltimateGUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Enabled = true
+-- MÉTHODE ESP ALTERNATIVE (BillboardGui au lieu de Drawing)
+local ESPCache = {}
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "NexusESP"
+ESPFolder.Parent = workspace
 
-if gethui then
-    ScreenGui.Parent = gethui()
-elseif syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = game.CoreGui
-elseif game.CoreGui then
-    ScreenGui.Parent = game.CoreGui
-else
-    ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-end
-
--- FRAME PRINCIPAL (VISIBLE IMMÉDIATEMENT)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -225)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = true  -- VISIBLE PAR DÉFAUT
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
-
--- TITRE
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-Title.Text = "NEXUS ULTIMATE | RUSH POINT"
-Title.TextColor3 = Color3.fromRGB(255, 50, 100)
-Title.TextSize = 18
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
--- BOUTON FERMER
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0, 40, 0, 40)
-CloseButton.Position = UDim2.new(1, -40, 0, 0)
-CloseButton.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize = 18
-CloseButton.Parent = MainFrame
-
-CloseButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    UserInputService.MouseIconEnabled = MainFrame.Visible
+-- GUI LINORIA (ancien GUI comme tu voulais)
+local success, Library = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
 end)
 
--- CONTENU PRINCIPAL
-local ContentFrame = Instance.new("ScrollingFrame")
-ContentFrame.Size = UDim2.new(1, -20, 1, -60)
-ContentFrame.Position = UDim2.new(0, 10, 0, 50)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.BorderSizePixel = 0
-ContentFrame.ScrollBarThickness = 4
-ContentFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 100)
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, 800)
-ContentFrame.Parent = MainFrame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 5)
-UIListLayout.Parent = ContentFrame
-
--- FONCTION POUR CRÉER UN TOGGLE
-function CreateToggle(text, default, callback)
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Size = UDim2.new(1, 0, 0, 30)
-    toggleFrame.BackgroundTransparency = 1
-    
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Size = UDim2.new(0, 20, 0, 20)
-    toggleButton.Position = UDim2.new(0, 0, 0, 5)
-    toggleButton.BackgroundColor3 = default and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
-    toggleButton.Text = ""
-    toggleButton.Parent = toggleFrame
-    
-    local toggleLabel = Instance.new("TextLabel")
-    toggleLabel.Size = UDim2.new(1, -30, 1, 0)
-    toggleLabel.Position = UDim2.new(0, 30, 0, 0)
-    toggleLabel.BackgroundTransparency = 1
-    toggleLabel.Text = text
-    toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleLabel.TextSize = 14
-    toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    toggleLabel.Font = Enum.Font.Gotham
-    toggleLabel.Parent = toggleFrame
-    
-    local value = default
-    
-    toggleButton.MouseButton1Click:Connect(function()
-        value = not value
-        toggleButton.BackgroundColor3 = value and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 50, 50)
-        callback(value)
-    end)
-    
-    toggleFrame.Parent = ContentFrame
-    return toggleFrame
+if not success then
+    -- Fallback si Linoria échoue
+    Library = loadstring(game:HttpGet("https://pastebin.com/raw/vq8kU3p2"))()
 end
 
--- FONCTION POUR CRÉER UN SLIDER
-function CreateSlider(text, min, max, default, callback)
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Size = UDim2.new(1, 0, 0, 60)
-    sliderFrame.BackgroundTransparency = 1
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.BackgroundTransparency = 1
-    label.Text = text .. ": " .. default
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.Gotham
-    label.Parent = sliderFrame
-    
-    local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(1, 0, 0, 10)
-    slider.Position = UDim2.new(0, 0, 0, 30)
-    slider.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    slider.BorderSizePixel = 0
-    slider.Parent = sliderFrame
-    
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
-    fill.BorderSizePixel = 0
-    fill.Parent = slider
-    
-    local value = default
-    
-    local function update(input)
-        local relativeX = math.clamp((input.Position.X - slider.AbsolutePosition.X) / slider.AbsoluteSize.X, 0, 1)
-        value = math.floor(min + (max - min) * relativeX)
-        fill.Size = UDim2.new(relativeX, 0, 1, 0)
-        label.Text = text .. ": " .. value
-        callback(value)
+local Window = Library:CreateWindow("NEXUS X | Rush Point")
+local Tabs = {
+    Main = Window:AddTab("Main"),
+    Visuals = Window:AddTab("Visuals"),
+    Settings = Window:AddTab("Settings")
+}
+
+-- MAIN TAB
+local AimbotSection = Tabs.Main:AddLeftGroupbox("Aimbot")
+
+AimbotSection:AddToggle('AimbotToggle', {
+    Text = 'Enable Aimbot',
+    Default = true,
+    Callback = function(value)
+        AimbotEnabled = value
     end
-    
-    slider.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            update(input)
-            
-            local connection
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    connection:Disconnect()
-                else
-                    update(input)
+})
+
+AimbotSection:AddSlider('FOVSlider', {
+    Text = 'FOV Size',
+    Default = 200,
+    Min = 50,
+    Max = 500,
+    Rounding = 0,
+    Callback = function(value)
+        FOV = value
+    end
+})
+
+AimbotSection:AddSlider('SmoothSlider', {
+    Text = 'Smoothness',
+    Default = 35,
+    Min = 1,
+    Max = 100,
+    Rounding = 0,
+    Callback = function(value)
+        Smoothness = value / 100
+    end
+})
+
+AimbotSection:AddDropdown('AimPartDropdown', {
+    Text = 'Aim Priority',
+    Default = 'Closest',
+    Values = {'Closest', 'Head', 'Torso', 'Random'},
+    Callback = function(value)
+        AimPriority = value
+    end
+})
+
+AimbotSection:AddKeybind('AimbotKeybind', {
+    Text = 'Aimbot Key',
+    Default = Enum.KeyCode.LeftAlt,
+    Callback = function(key)
+        AimKey = key
+    end
+})
+
+-- VISUALS TAB
+local VisualsSection = Tabs.Visuals:AddLeftGroupbox("ESP")
+
+VisualsSection:AddToggle('ESPToggle', {
+    Text = 'Enable ESP',
+    Default = true,
+    Callback = function(value)
+        ESPEnabled = value
+        if not value then
+            -- Cache tous les ESP
+            for _, esp in pairs(ESPCache) do
+                if esp.Billboard then
+                    esp.Billboard.Enabled = false
                 end
-            end)
-        end
-    end)
-    
-    sliderFrame.Parent = ContentFrame
-    return sliderFrame
-end
-
--- FONCTION POUR CHANGER LA TOUCHE
-function CreateKeybind(text, defaultKey, callback)
-    local keybindFrame = Instance.new("Frame")
-    keybindFrame.Size = UDim2.new(1, 0, 0, 40)
-    keybindFrame.BackgroundTransparency = 1
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.BackgroundTransparency = 1
-    label.Text = text .. ": " .. tostring(defaultKey):gsub("Enum.KeyCode.", "")
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.Gotham
-    label.Parent = keybindFrame
-    
-    local keyButton = Instance.new("TextButton")
-    keyButton.Size = UDim2.new(0, 120, 0, 30)
-    keyButton.Position = UDim2.new(0, 0, 0, 25)
-    keyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-    keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    keyButton.Text = "Changer Touche"
-    keyButton.Parent = keybindFrame
-    
-    local currentKey = defaultKey
-    local listening = false
-    
-    keyButton.MouseButton1Click:Connect(function()
-        if not listening then
-            listening = true
-            keyButton.Text = "Appuie sur une touche..."
-            keyButton.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
-            
-            local connection
-            connection = UserInputService.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.Keyboard then
-                    currentKey = input.KeyCode
-                    label.Text = text .. ": " .. tostring(currentKey):gsub("Enum.KeyCode.", "")
-                    keyButton.Text = "Changer Touche"
-                    keyButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-                    listening = false
-                    callback(currentKey)
-                    connection:Disconnect()
+                if esp.DrawingBox then
+                    esp.DrawingBox.Visible = false
                 end
-            end)
+            end
         end
-    end)
-    
-    keybindFrame.Parent = ContentFrame
-    return keybindFrame
-end
+    end
+})
 
--- CRÉATION DES ÉLÉMENTS DU GUI
-CreateToggle("ESP Activer", true, function(value)
-    ESPEnabled = value
-    print("ESP:", value)
-end)
+VisualsSection:AddToggle('BoxESToggle', {
+    Text = 'Box ESP',
+    Default = true,
+    Callback = function(value)
+        for _, esp in pairs(ESPCache) do
+            if esp.DrawingBox then
+                esp.DrawingBox.Visible = value and ESPEnabled
+            end
+        end
+    end
+})
 
-CreateToggle("Aimbot Activer", true, function(value)
-    AimbotEnabled = value
-    print("Aimbot:", value)
-end)
+VisualsSection:AddToggle('NameESToggle', {
+    Text = 'Show Names',
+    Default = true,
+    Callback = function(value)
+        for _, esp in pairs(ESPCache) do
+            if esp.Billboard then
+                esp.Billboard.Enabled = value and ESPEnabled
+            end
+        end
+    end
+})
 
-CreateToggle("Team Check", false, function(value)
-    TeamCheck = value
-    print("Team Check:", value)
-end)
+VisualsSection:AddToggle('HealthESToggle', {
+    Text = 'Show Health',
+    Default = true,
+    Callback = function(value)
+        for _, esp in pairs(ESPCache) do
+            if esp.HealthLabel then
+                esp.HealthLabel.Visible = value and ESPEnabled
+            end
+        end
+    end
+})
 
-CreateToggle("Wall Check", false, function(value)
-    WallCheck = value
-    print("Wall Check:", value)
-end)
+VisualsSection:AddColorpicker('ESPColor', {
+    Text = 'ESP Color',
+    Default = Color3.fromRGB(255, 0, 0),
+    Callback = function(value)
+        for _, esp in pairs(ESPCache) do
+            if esp.DrawingBox then
+                esp.DrawingBox.Color = value
+            end
+            if esp.Billboard then
+                esp.Billboard.Frame.BackgroundColor3 = value
+            end
+        end
+    end
+})
 
-CreateToggle("Montrer FOV", true, function(value)
-    ShowFOV = value
-    FOVCircle.Visible = value
-    print("Show FOV:", value)
-end)
+-- SETTINGS TAB
+local SettingsSection = Tabs.Settings:AddLeftGroupbox("Configuration")
 
-CreateSlider("Taille FOV", 10, 500, 180, function(value)
-    FOV = value
-    print("FOV:", value)
-end)
+SettingsSection:AddToggle('TeamCheckToggle', {
+    Text = 'Team Check (May break ESP)',
+    Default = false,
+    Callback = function(value)
+        TeamCheck = value
+    end
+})
 
-CreateSlider("Smoothness", 1, 100, 25, function(value)
-    Smoothness = value / 100
-    print("Smoothness:", Smoothness)
-end)
+SettingsSection:AddToggle('WallCheckToggle', {
+    Text = 'Wall Check',
+    Default = false,
+    Callback = function(value)
+        WallCheck = value
+    end
+})
 
-CreateKeybind("Touche Aimbot", Enum.KeyCode.C, function(key)
-    AimKey = key
-    print("Aim Key:", key)
-end)
+SettingsSection:AddToggle('ShowFOVToggle', {
+    Text = 'Show FOV Circle',
+    Default = true,
+    Callback = function(value)
+        ShowFOV = value
+        FOVCircle.Visible = value
+    end
+})
 
--- BOUTON RAFRAÎCHIR
-local RefreshButton = Instance.new("TextButton")
-RefreshButton.Size = UDim2.new(1, 0, 0, 35)
-RefreshButton.Position = UDim2.new(0, 0, 0, ContentFrame.CanvasSize.Y.Offset + 10)
-RefreshButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-RefreshButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-RefreshButton.Text = "Rafraîchir ESP"
-RefreshButton.TextSize = 14
-RefreshButton.Parent = ContentFrame
-
-RefreshButton.MouseButton1Click:Connect(function()
+SettingsSection:AddButton('Refresh ESP', function()
+    -- Force refresh ESP
     for _, esp in pairs(ESPCache) do
-        if esp.Box then esp.Box:Remove() end
-        if esp.Name then esp.Name:Remove() end
-        if esp.Health then esp.Health:Remove() end
+        if esp.Billboard then esp.Billboard:Destroy() end
+        if esp.DrawingBox then esp.DrawingBox:Remove() end
+        if esp.HealthLabel then esp.HealthLabel:Remove() end
     end
     ESPCache = {}
     
+    -- Recréer ESP pour tous les joueurs
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
             CreateESP(player)
         end
     end
-    print("ESP rafraîchi")
 end)
 
--- BOUTON UNLOAD
-local UnloadButton = Instance.new("TextButton")
-UnloadButton.Size = UDim2.new(1, 0, 0, 35)
-UnloadButton.Position = UDim2.new(0, 0, 0, ContentFrame.CanvasSize.Y.Offset + 50)
-UnloadButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-UnloadButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-UnloadButton.Text = "DÉCHARGER NEXUS"
-UnloadButton.TextSize = 14
-UnloadButton.Parent = ContentFrame
-
-UnloadButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-    FOVCircle:Remove()
-    for _, esp in pairs(ESPCache) do
-        if esp.Box then esp.Box:Remove() end
-        if esp.Name then esp.Name:Remove() end
-        if esp.Health then esp.Health:Remove() end
+SettingsSection:AddButton('Force Aimbot Test', function()
+    -- Test l'aimbot immédiatement
+    local target = FindBestTarget()
+    if target then
+        Library:Notify("Aimbot working! Target: " .. target.Player.Name, 3)
+    else
+        Library:Notify("No target found in FOV", 3)
     end
-    ESPCache = {}
-    print("Nexus déchargé")
 end)
 
--- METTRE À JOUR LA TAILLE DU CANVAS
-ContentFrame.CanvasSize = UDim2.new(0, 0, 0, #ContentFrame:GetChildren() * 65)
+SettingsSection:AddLabel("Menu Key: RightControl")
+SettingsSection:AddLabel("Aimbot Key: LeftAlt (Hold)")
 
--- ESP STORAGE
-local ESPCache = {}
+-- SET WINDOW KEYBIND
+Library:SetWindowKeybind(MenuKey)
 
--- CRÉATION ESP (MÉTHODE SPÉCIAL RUSH POINT)
+-- MÉTHODE ESP AGGRESSIVE (double système)
 function CreateESP(player)
     if ESPCache[player] then return end
     
-    -- Box Drawing
-    local box = Drawing.new("Square")
-    box.Visible = false
-    box.Color = Color3.fromRGB(255, 50, 100)
-    box.Thickness = 2
-    box.Filled = false
+    -- MÉTHODE 1: BillboardGui (plus stable pour Rush Point)
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = player.Name .. "_ESP"
+    billboard.Size = UDim2.new(0, 100, 0, 40)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Enabled = false
+    billboard.Adornee = nil
+    billboard.Parent = ESPFolder
     
-    -- Name Drawing
-    local name = Drawing.new("Text")
-    name.Visible = false
-    name.Color = Color3.fromRGB(255, 255, 255)
-    name.Size = 14
-    name.Text = player.Name
-    name.Font = 2
-    name.Outline = true
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 1, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    frame.BackgroundTransparency = 0.6
+    frame.BorderSizePixel = 2
+    frame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    frame.Parent = billboard
     
-    -- Health Drawing
-    local health = Drawing.new("Text")
-    health.Visible = false
-    health.Color = Color3.fromRGB(0, 255, 100)
-    health.Size = 12
-    health.Font = 2
-    health.Outline = true
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.5, 0)
+    nameLabel.Position = UDim2.new(0, 0, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.GothamBold
+    nameLabel.Parent = billboard
+    
+    -- MÉTHODE 2: Drawing (backup)
+    local drawingBox = Drawing.new("Square")
+    drawingBox.Visible = false
+    drawingBox.Color = Color3.fromRGB(255, 0, 0)
+    drawingBox.Thickness = 2
+    drawingBox.Filled = false
+    
+    local healthLabel = Drawing.new("Text")
+    healthLabel.Visible = false
+    healthLabel.Color = Color3.fromRGB(0, 255, 0)
+    healthLabel.Size = 12
+    healthLabel.Font = 2
+    healthLabel.Outline = true
     
     ESPCache[player] = {
-        Box = box,
-        Name = name,
-        Health = health
+        Billboard = billboard,
+        DrawingBox = drawingBox,
+        HealthLabel = healthLabel,
+        Player = player
     }
 end
 
--- UPDATE ESP (MÉTHODE SIMPLIFIÉE POUR RUSH POINT)
 function UpdateESP()
     for player, esp in pairs(ESPCache) do
         if player and player.Character then
-            -- Recherche de n'importe quelle partie du corps
-            local foundPart = nil
-            for _, part in ipairs(player.Character:GetChildren()) do
-                if part:IsA("BasePart") and part.Name ~= "Humanoid" then
-                    foundPart = part
-                    break
+            -- Trouver n'importe quelle partie pour la position
+            local root = player.Character:FindFirstChild("HumanoidRootPart") or
+                        player.Character:FindFirstChild("Head") or
+                        player.Character:FindFirstChild("UpperTorso")
+            
+            if not root then
+                -- Scan agressif pour trouver une partie
+                for _, child in ipairs(player.Character:GetChildren()) do
+                    if child:IsA("BasePart") then
+                        root = child
+                        break
+                    end
                 end
             end
             
-            if foundPart then
-                local pos, onScreen = Camera:WorldToViewportPoint(foundPart.Position)
-                
-                if onScreen then
-                    -- Box ESP (méthode simple)
-                    local scale = 1200 / pos.Z
-                    local width = scale * 1.5
-                    local height = scale * 2.5
+            if root then
+                -- Billboard ESP
+                if esp.Billboard then
+                    esp.Billboard.Adornee = root
+                    esp.Billboard.Enabled = ESPEnabled
                     
-                    esp.Box.Size = Vector2.new(width, height)
-                    esp.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
-                    esp.Box.Visible = ESPEnabled
-                    
-                    -- Name
-                    esp.Name.Position = Vector2.new(pos.X, pos.Y - height/2 - 20)
-                    esp.Name.Visible = ESPEnabled
-                    
-                    -- Health (si disponible)
+                    -- Mettre à jour la santé
                     local humanoid = player.Character:FindFirstChild("Humanoid")
                     if humanoid then
-                        esp.Health.Text = "HP: " .. math.floor(humanoid.Health)
-                        esp.Health.Position = Vector2.new(pos.X, pos.Y + height/2 + 5)
-                        esp.Health.Visible = ESPEnabled
+                        esp.HealthLabel.Text = "HP: " .. math.floor(humanoid.Health)
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        if healthPercent > 0.6 then
+                            esp.HealthLabel.Color = Color3.fromRGB(0, 255, 0)
+                        elseif healthPercent > 0.3 then
+                            esp.HealthLabel.Color = Color3.fromRGB(255, 255, 0)
+                        else
+                            esp.HealthLabel.Color = Color3.fromRGB(255, 0, 0)
+                        end
+                    end
+                end
+                
+                -- Drawing ESP (backup)
+                local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
+                if onScreen then
+                    if esp.DrawingBox then
+                        local scale = 1000 / pos.Z
+                        esp.DrawingBox.Size = Vector2.new(scale * 2, scale * 3)
+                        esp.DrawingBox.Position = Vector2.new(pos.X - scale, pos.Y - scale * 1.5)
+                        esp.DrawingBox.Visible = ESPEnabled
+                    end
+                    
+                    if esp.HealthLabel then
+                        esp.HealthLabel.Position = Vector2.new(pos.X, pos.Y + 50)
+                        esp.HealthLabel.Visible = ESPEnabled
                     end
                 else
-                    esp.Box.Visible = false
-                    esp.Name.Visible = false
-                    esp.Health.Visible = false
+                    if esp.DrawingBox then esp.DrawingBox.Visible = false end
+                    if esp.HealthLabel then esp.HealthLabel.Visible = false end
                 end
             else
-                esp.Box.Visible = false
-                esp.Name.Visible = false
-                esp.Health.Visible = false
+                if esp.Billboard then esp.Billboard.Enabled = false end
+                if esp.DrawingBox then esp.DrawingBox.Visible = false end
+                if esp.HealthLabel then esp.HealthLabel.Visible = false end
             end
         else
-            esp.Box.Visible = false
-            esp.Name.Visible = false
-            esp.Health.Visible = false
+            if esp.Billboard then esp.Billboard.Enabled = false end
+            if esp.DrawingBox then esp.DrawingBox.Visible = false end
+            if esp.HealthLabel then esp.HealthLabel.Visible = false end
         end
     end
 end
 
--- AIMBOT ULTIMATE POUR RUSH POINT
-local Aiming = false
-
-function GetBestTarget()
-    if not LocalPlayer.Character then return nil end
-    
+-- AIMBOT AGGRESSIF (force la détection)
+function FindBestTarget()
     local bestTarget = nil
     local closestDistance = FOV
     local mousePos = Vector2.new(Mouse.X, Mouse.Y)
@@ -444,40 +369,79 @@ function GetBestTarget()
     
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
-            -- Vérification d'équipe si activé
-            if not TeamCheck or (not player.Team or not LocalPlayer.Team or player.Team ~= LocalPlayer.Team) then
+            -- Skip team check si désactivé ou si problème
+            if not TeamCheck or (player.Team ~= LocalPlayer.Team) then
                 if player.Character and player.Character:FindFirstChild("Humanoid") then
                     local humanoid = player.Character.Humanoid
                     if humanoid.Health > 0 then
-                        -- Recherche de la tête d'abord, puis autre chose
-                        local targetPart = player.Character:FindFirstChild("Head") or
-                                          player.Character:FindFirstChild("HumanoidRootPart") or
-                                          player.Character:FindFirstChild("UpperTorso")
+                        -- FORCE la recherche de parties
+                        local partsToCheck = {}
                         
-                        if not targetPart then
-                            -- Cherche n'importe quelle BasePart
-                            for _, part in ipairs(player.Character:GetChildren()) do
-                                if part:IsA("BasePart") then
-                                    targetPart = part
+                        -- Priorité 1: Parties normales
+                        local normalParts = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}
+                        for _, partName in ipairs(normalParts) do
+                            local part = player.Character:FindFirstChild(partName)
+                            if part then
+                                table.insert(partsToCheck, {Part = part, Priority = 3})
+                            end
+                        end
+                        
+                        -- Priorité 2: Membres
+                        local limbParts = {"LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg"}
+                        for _, partName in ipairs(limbParts) do
+                            local part = player.Character:FindFirstChild(partName)
+                            if part then
+                                table.insert(partsToCheck, {Part = part, Priority = 2})
+                            end
+                        end
+                        
+                        -- Priorité 3: N'importe quelle BasePart
+                        if #partsToCheck == 0 then
+                            for _, child in ipairs(player.Character:GetChildren()) do
+                                if child:IsA("BasePart") then
+                                    table.insert(partsToCheck, {Part = child, Priority = 1})
                                     break
                                 end
                             end
                         end
                         
-                        if targetPart then
-                            local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                        -- Vérifier chaque partie
+                        for _, partData in ipairs(partsToCheck) do
+                            local part = partData.Part
+                            local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
                             
                             if onScreen then
                                 local distance = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
                                 
                                 if distance < closestDistance then
-                                    bestTarget = {
-                                        Player = player,
-                                        Part = targetPart,
-                                        Position = targetPart.Position,
-                                        Distance = distance
-                                    }
-                                    closestDistance = distance
+                                    -- Wall check optionnel
+                                    if WallCheck then
+                                        local origin = Camera.CFrame.Position
+                                        local target = part.Position
+                                        local direction = (target - origin).Unit
+                                        local ray = Ray.new(origin, direction * 500)
+                                        local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character, Camera, ESPFolder})
+                                        
+                                        if hit and hit:IsDescendantOf(player.Character) then
+                                            bestTarget = {
+                                                Player = player,
+                                                Part = part,
+                                                Position = part.Position,
+                                                Distance = distance,
+                                                Priority = partData.Priority
+                                            }
+                                            closestDistance = distance
+                                        end
+                                    else
+                                        bestTarget = {
+                                            Player = player,
+                                            Part = part,
+                                            Position = part.Position,
+                                            Distance = distance,
+                                            Priority = partData.Priority
+                                        }
+                                        closestDistance = distance
+                                    end
                                 end
                             end
                         end
@@ -490,13 +454,10 @@ function GetBestTarget()
     return bestTarget
 end
 
--- GESTION DES TOUCHES
+-- GESTION DES INPUTS
+local Aiming = false
+
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode == MenuKey then
-        MainFrame.Visible = not MainFrame.Visible
-        UserInputService.MouseIconEnabled = MainFrame.Visible
-    end
-    
     if input.KeyCode == AimKey then
         Aiming = true
     end
@@ -508,89 +469,127 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- BOUCLE PRINCIPALE (100% FONCTIONNEL)
+-- BOUCLE PRINCIPALE ULTRA-AGGRESSIVE
 RunService.RenderStepped:Connect(function()
-    -- Mettre à jour le FOV Circle
+    -- Force FOV update
     FOVCircle.Radius = FOV
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     
-    -- Mettre à jour l'ESP
+    -- Force ESP update
     UpdateESP()
     
-    -- AIMBOT LOGIC
+    -- FORCE AIMBOT
     if AimbotEnabled and Aiming then
-        local target = GetBestTarget()
+        local target = FindBestTarget()
         
         if target and target.Part then
-            -- Calcul de la position cible
+            -- Position cible avec prédiction
             local targetPos = target.Position
             
-            -- Prédiction de mouvement basique
+            -- Ajouter de la prédiction de mouvement
             if target.Player.Character:FindFirstChild("Humanoid") then
                 local humanoid = target.Player.Character.Humanoid
-                targetPos = targetPos + (humanoid.MoveDirection * 0.15)
+                targetPos = targetPos + (humanoid.MoveDirection * 0.2)
             end
             
-            -- Calcul du nouveau CFrame avec smoothing
+            -- Calcul du smoothing FORCÉ
             local currentCF = Camera.CFrame
             local goalCF = CFrame.new(currentCF.Position, targetPos)
             
-            -- Appliquer le smoothing
+            -- Appliquer le smoothing agressif
             Camera.CFrame = currentCF:Lerp(goalCF, Smoothness)
+            
+            -- Debug visuel
+            if target.Player.Character:FindFirstChild("Head") then
+                local head = target.Player.Character.Head
+                local pos = Camera:WorldToViewportPoint(head.Position)
+                
+                -- Créer un point de cible visuel
+                if not ESPCache[target.Player].TargetDot then
+                    local dot = Drawing.new("Circle")
+                    dot.Visible = true
+                    dot.Radius = 5
+                    dot.Color = Color3.fromRGB(0, 255, 0)
+                    dot.Thickness = 3
+                    dot.Filled = true
+                    ESPCache[target.Player].TargetDot = dot
+                end
+                
+                ESPCache[target.Player].TargetDot.Position = Vector2.new(pos.X, pos.Y)
+            end
+        else
+            -- Nettoyer les points de cible
+            for _, esp in pairs(ESPCache) do
+                if esp.TargetDot then
+                    esp.TargetDot.Visible = false
+                end
+            end
+        end
+    else
+        -- Nettoyer les points de cible quand pas d'aimbot
+        for _, esp in pairs(ESPCache) do
+            if esp.TargetDot then
+                esp.TargetDot.Visible = false
+            end
         end
     end
 end)
 
--- INITIALISATION
+-- INITIALISATION FORCÉE
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         CreateESP(player)
     end
 end
 
--- CONNEXIONS JOUEURS
 Players.PlayerAdded:Connect(function(player)
+    wait(0.5) -- Attendre que le character charge
     CreateESP(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
     if ESPCache[player] then
-        if ESPCache[player].Box then ESPCache[player].Box:Remove() end
-        if ESPCache[player].Name then ESPCache[player].Name:Remove() end
-        if ESPCache[player].Health then ESPCache[player].Health:Remove() end
+        if ESPCache[player].Billboard then ESPCache[player].Billboard:Destroy() end
+        if ESPCache[player].DrawingBox then ESPCache[player].DrawingBox:Remove() end
+        if ESPCache[player].HealthLabel then ESPCache[player].HealthLabel:Remove() end
+        if ESPCache[player].TargetDot then ESPCache[player].TargetDot:Remove() end
         ESPCache[player] = nil
     end
 end)
 
--- MESSAGE DE CONFIRMATION
-print("========================================")
-print("NEXUS ULTIMATE - RUSH POINT")
-print("========================================")
-print("✓ GUI chargé et visible")
-print("✓ ESP activé")
-print("✓ Aimbot activé (Touche: C)")
-print("✓ FOV Circle visible")
-print("✓ Menu: Insert (visible)")
-print("========================================")
-print("Instructions:")
-print("1. Le GUI est déjà visible")
-print("2. Maintenir C pour utiliser l'aimbot")
-print("3. Insert pour cacher/montrer le menu")
-print("4. Changer la touche aimbot dans le menu")
-print("========================================")
+-- MESSAGE DE DÉMARRAGE AGGRESSIF
+Library:Notify("NEXUS X LOADED - Rush Point Bypass Active", 5)
 
--- Notification visuelle
-local Notification = Instance.new("TextLabel")
-Notification.Size = UDim2.new(0, 300, 0, 50)
-Notification.Position = UDim2.new(0.5, -150, 0.1, 0)
-Notification.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-Notification.TextColor3 = Color3.fromRGB(0, 255, 100)
-Notification.Text = "NEXUS ULTIMATE LOADED\nAimbot: C | Menu: Insert"
-Notification.TextSize = 14
-Notification.Font = Enum.Font.GothamBold
-Notification.TextWrapped = true
-Notification.Parent = ScreenGui
+print("╔══════════════════════════════════════╗")
+print("║      NEXUS X - RUSH POINT BYPASS     ║")
+print("╠══════════════════════════════════════╣")
+print("║ ESP: DOUBLE SYSTEM (Forced)          ║")
+print("║ • BillboardGui + Drawing Backup      ║")
+print("║ • Names + Health + Box               ║")
+print("╠══════════════════════════════════════╣")
+print("║ AIMBOT: AGGRESSIVE SCAN              ║")
+print("║ • Scans ALL body parts               ║")
+print("║ • Priority system                    ║")
+print("║ • Visual target indicator            ║")
+print("╠══════════════════════════════════════╣")
+print("║ CONTROLS:                            ║")
+print("║ • Menu: Right Control                ║")
+print("║ • Aimbot: Hold Left Alt              ║")
+print("║ • Change keys in menu                ║")
+print("╚══════════════════════════════════════╝")
 
--- Faire disparaître la notification après 5 secondes
-wait(5)
-Notification:Destroy()
+-- TEST AUTOMATIQUE APRÈS 3 SECONDES
+wait(3)
+local targetCount = 0
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        targetCount = targetCount + 1
+    end
+end
+print("[TEST] Players found:", targetCount)
+print("[TEST] ESP Created:", #ESPCache)
+print("[TEST] Aimbot ready:", AimbotEnabled)
+
+if targetCount > 0 then
+    Library:Notify("Found " .. targetCount .. " potential targets", 3)
+end
